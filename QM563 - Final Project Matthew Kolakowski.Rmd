@@ -1,0 +1,379 @@
+---
+title: "Matthew Kolakowski Programming and Data Visualization Final Project"
+author: "Matthew Kolakowski"
+date: "12/14/2020"
+output: pdf_document
+---
+
+Please submit this .Rmd file and compiled (Knit) output (as .html or .pdf)
+
+Scenario:
+Welcome to Care4All PCPs, the largest Primary Care Network in the state of California! We are glad to have someone with your analytical prowess on board. We are interested in ensuring that our patients get the highest quality care at the fairest price. To that end, we hired a consultant to perform an analysis of hospitals in California to help us understand 
+1) Which hospitals are the highest quality?
+2) Which hospitals charge the most/least?
+
+Based on our request, the consultant provided data and code for each of those questions. While this was helpful, we want to rewrite the code in a different language and explain it in detail (no comments or explanations were provided). Then, we would like to extend this work to learn about the relationship between health quality and cost for our patients. Therefore, we have laid out 3 tasks. 
+
+*Your Tasks:*
+
+Task 1: Describe hospital quality ratings in California
+  Using code written in R, 1a) Explain the code then 1b) Translate that code into Python, improving it as necessary to best answer the question
+  
+Task 2: Describe procedure prices at hospitals in California
+  Using code written in Python, 2a) Explain the code, then 2b) Translate that code into R, improving it as necessary to best answer the question
+  
+Task 3: Combine Data and Create Visualization
+  Use the data from the first two tasks to determine the relationship between price and quality.
+  
+# Task 1: Hospital quality ratings in the state of California
+For this task, you are given a .csv from *data.medicare.gov/data/hospital-compare* to help answer the question. This dataset contains identifying information for the hospital (Provider ID, Hospital Name, Phone Number, etc.) as well as Medicare-determined quality metrics (Overall rating, national comparison, safety of care, etc.). 
+
+# 1a) Explain the code
+Explain in as much detail as possible what the code is doing and how it arrives at the final output table. How does this address the task of describing quality ratings of hospitals in California?
+
+*Add comments in the code and a several sentence summary to complete this task.*
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) #The code listed loads the Tidyverse library, gets the working directory so I know that when uploading the CSV, the RMD file is in the same location. Finally, I installed the plotly package as I wanted to generate some interactive plots. 
+library(tidyverse)
+getwd()
+install.packages(plotly)
+library(plotly)
+```
+
+```{r read data, include=FALSE}
+hosp_info = read_csv('HospInfo.csv') #This command reads in the CSV file into the .RMD file. 
+```
+
+```{r 1A Code Explanation}
+hosp_names = hosp_info %>% 
+  filter(`Hospital Type` == "Acute Care Hospitals") %>%
+  filter(State == "CA") %>%
+  pull(`Hospital Name`)
+
+hosp_info_CA = 
+hosp_info %>% 
+  rename(`Hospital` = `Hospital Name`,
+         `Provider_ID` = `Provider ID`,
+         `Safety` = `Safety of care national comparison`,
+         `Effectiveness` = `Effectiveness of care national comparison`
+         ) %>%
+  filter(Hospital %in% hosp_names, State == "CA") %>%
+  mutate(Overall_Rating = as.numeric(`Hospital overall rating`)) %>%
+  drop_na(Overall_Rating)
+
+hosp_info_CA %>% 
+  arrange(desc(Overall_Rating), Hospital) %>% 
+  head(10)
+
+hosp_info_CA %>% 
+  group_by(Overall_Rating, Safety) %>% 
+  count()
+
+write_csv(hosp_info_CA, 'hosp_info_CA.csv')
+```
+# Explanation for Lines 48 Through 73 of Code
+Lines 48 through 73 of this code allowed me to perform several tasks: 1. Filter hospital names from the State of California, 2. Rename a few variables in the California hospital information for clarity, 3. Mutate (Change the Overall Rating to a Numeric Value of 1 through 5), and finally 4. Arrange and Group California hospitals by overall rating and safety. The last command wrote the California Hospital Overall Ratings and Safety to a CSV file. What this code does is transforms the data (Through renaming, filtering, dropping not applicable observations, mutating Hospital Ratings Into Numeric Format, and then grouping by Overall Rating) into a readable output. 
+
+# Code Explanation for Next Process
+Presenting optimal healthcare data is difficult and showing clients poorly articulated presentations is not acceptable. To make the presentation short, but impactful, I went with robust code chunks in RStudio since visualization and interpretation of the data are my two focal points. What I found most beneficial to our client was providing a total quality snapshot of California hospitals (Critical Access and Acute Care Hospitals). For clarity, this analysis excludes Children Hospitals due to a lack of complete data. With the continued prevalence of rural and critical access hospitals closing, I wanted to demonstrate the importance of quality and operational stability (More  Details on that in the Cost Section). Finally, it was important to analyze a complete yet as clean as possible data set. To achieve this "clean" data set, it was important to complete a similar process as described for lines 48 through 73 (Filtering, Renaming, Mutating, Changing Overall Quality to a Numeric Value with as.numeric, and then arranging and grouping the observations).Finally, the code is sectioned into Above Average and Below Average Quality to isolate the number of hospitals in California with above and below average overall quality ratings on a 5 point scale. 
+
+```{r Quality Measures}
+
+# Analyzing Quality Measures
+Quality = 
+hosp_info %>% 
+  rename(Hospital = `Hospital Name`,
+         Provider_ID = `Provider ID`,
+         Safety = `Safety of care national comparison`,
+         Effectiveness = `Effectiveness of care national comparison`,
+         Mortality = `Mortality national comparison`,
+         Readmission = `Readmission national comparison`,
+         Pt_Experience = `Patient experience national comparison`,
+         Care_Timeliness = `Timeliness of care national comparison`
+         ) %>%
+  filter(State == "CA") %>%
+  mutate(Overall_Rating = as.numeric(`Hospital overall rating`)) %>%
+  drop_na(Overall_Rating)
+
+OverallRating = Quality %>% 
+  group_by(Overall_Rating, Safety, Care_Timeliness, Pt_Experience) %>% 
+  count()
+
+print(OverallRating)
+
+Quality %>%
+  arrange(desc(Overall_Rating), Hospital) %>% 
+  head(25)
+
+print(Quality)
+
+# Examine Above Average Quality Facilities and Number (Count)
+AboveAVGQuality = Quality %>% 
+  group_by(Overall_Rating, 
+           Care_Timeliness, 
+           Readmission) %>%
+  filter(Pt_Experience == "Above the national average") %>%
+  count()
+
+print(AboveAVGQuality)
+
+# Examine Below Average Quality Facilities and Number (Count)
+BelowAVGQuality = Quality %>% 
+  group_by(Overall_Rating, Care_Timeliness, Readmission) %>%
+  filter(Pt_Experience == "Below the national average") %>%
+  count()
+
+print(BelowAVGQuality)
+```
+# Other Factors
+It was important to examine other quality factors including safety, timeliness of care, and patient experience. These factors create a healthcare environment where quality and patient outcomes can be positively or negatively impacted. Including these factors into the analysis allows for a clearer picture of hospital quality outcomes and ratings in the State of California. 
+
+# 1b) (Translation to Python)
+The Python Translation is located in the .ipynb file attached to the final submission
+
+# Task 2: Hospital Costs in the state of California
+***Motivating Question*** : **Which hospitals charge the most/least?**
+
+For this task, you are given a .csv from *https://data.cms.gov/Medicare-Inpatient/Inpatient-Prospective-Payment-System-IPPS-Provider/97k6-zzx3* to help investigate hospital costs in California. The dataset contains identifying information for the hospital (Provider ID, Hospital Name, Address, Zip Code), the diagnosis-related group (DRG), and associated costs (Average Total Payments, Average Medicare Payments)
+
+*Average Total Payments*:
+The average of Medicare payments to the provider for the DRG including the DRG amount, teaching,  disproportionate share, capital, and outlier payments for all cases. Also included are co-payment and deductible amounts that the patient is responsible for. 
+
+# 2a) (Translation to Python)
+The Python Translation is located in the .ipynb file attached to the final submission. 
+
+# 2b) Translate the Python Code to R
+Translate the provided code from Python to R, improving it if necessary to best address the question: **Which hospitals cost the most/least?**. 
+
+```{r Python 2B Translation to R}
+#Similar to Python, the first step is to read in the data and then merge the Diagnosis Related Group (DRG) text descriptions with the DRG codes. Filtered the data to only include hospitals from California to match the Python output.  
+
+DRGCosts = read_csv("Inpatient_Prospective_Payment_System__IPPS__Provider_Summary_for_the_Top_100_Diagnosis-Related_Groups__DRG__-_FY2011.csv") %>% 
+  filter(`Provider State` %in% 'CA') %>%
+  separate("DRG Definition", c("DRG_Code", "DRG_Description"), "-", extra = "merge") %>%
+  rename("Total_Cost" = `Average Total Payments`, 
+         "Count_Discharges" = `Total Discharges`, 
+         "Provider_ID" = `Provider Id`) %>% 
+  group_by(DRG_Code) %>%
+  mutate(Avg_DRG_Cost = mean(Total_Cost)) %>%
+  mutate(Cost_Diff = Total_Cost - Avg_DRG_Cost)
+print(DRGCosts)
+
+#  Find the 10 highest and lowest costs Diagnosis Related Groups (DRGs)
+top_drgs = DRGCosts %>% 
+  group_by(DRG_Code) %>% 
+  summarise(sum_discharges = sum(Count_Discharges)) %>% 
+  arrange(desc(sum_discharges))
+
+top_n(top_drgs, n = 10) #Ten highest
+top_n(top_drgs, n = -10) #Ten lowest denoted with the negative sign
+```
+# Writing the Python code into R
+Utilizing the mutate function, I replicated the tasks performed in Python. The best method to ensure similarity was to group the analysis by Diagnosis Related Group (DRG) code. It presents a clean and easily followed picture of California hospitals. 
+
+# Additional Insights
+Something that was interesting from the Python code that I wanted to examine in more detail was DRG code 870 (Septicemia or Severe Sepsis With MV>96 Hours). The low quality of care rating (2 out of 5) and high associated costs indicates that the treatment and utilization review of sepsis patients requires more attention by Chief Medical Officers (CMOs) and Chief Nursing Officers (CNOs). The 870 DRG tells us one important point about hospital care in the State of California- The amount of reimbursement by Medicare and total costs does not serve as a bellwether for Overall Quality and Safety Ratings. In another words, premium care does not always come with a high price tag and low cost healthcare services does not automatically mean low quality either.  
+
+# Task 3: What is the relationship between cost and quality?
+Is it the case that "you get what you pay for"? Now that we have completed some preliminary analyses of the cost and quality of Hospitals in the state of California, we would like to take a look at their relationship jointly. That is, we would like to see how cost relates to quality by combining the output from the first two questions.
+
+# 3a) Join/Merge together Cost and Quality tables
+Join together the resulting tables from tasks 1 and 2. What type of join did you perform and why? How many hospitals were removed (if any) due to the type of join?
+
+```{r Costs and Hospital Ratings in California}
+CostCalifornia = left_join(DRGCosts, Quality, by = "Provider_ID") %>%
+  select(-"State", 
+         -"Provider Street Address", 
+         -"Provider City", 
+         -"Provider Zip Code", 
+         -"Hospital Referral Region Description", 
+         -"Provider Name") %>% 
+  rename("Total_Medicare_Cost" = "Average Medicare Payments", 
+         "Total_Covered_Cost" = "Average Covered Charges", 
+         "Provider_State" = "Provider State") %>% 
+  filter(Provider_State %in% c("CA"))
+
+# Total costs by Diagnosis Related Groups and Hospital Ratings
+
+CostCalifornia %>% group_by(DRG_Code, Overall_Rating) %>%
+  summarise(sum_cost = sum(Total_Cost)) %>% 
+  drop_na(Overall_Rating) %>%
+  arrange(desc(sum_cost))
+
+# Anti Join to Identify Losses of Fidelity
+MissingHospitals = anti_join(Quality, DRGCosts, 
+                         by = "Provider_ID") %>%
+  filter(State %in% c("CA"))
+
+MissingHospitals
+```
+# Join Strategy and Code Walkthrough
+I wanted to keep the Provider ID to the far left of the data set so I performed a left join on the variable Provider_ID (It was included in both data sets so it made sense from a simplicity standpoint). To determine which hospitals were dropped from the merge, I performed an anti join to identify which hospitals did map to the costs data set. Similar to the strategies for questions 1 and 2, I isolated the State of California hospitals as I found the entire data set to be unnecessary for our client at this time. Additionally, California seems to have a statewide inconsistency in the ability to control costs for complex sepsis patients. I believe the California Medical Association (CMA) should get involved on a statewide level on provider and nurse education to increase patient satisfaction, outcomes, and control costs.
+
+# 3b) Create a Visualization
+Using the insights you gained from the sections above, create a visualization to address the question. Provide a detailed explanation of the insights gained from your visualization. 
+
+```{r California Hospital Ranking and Procedure Costs Visualization}
+
+California = CostCalifornia %>% group_by(Overall_Rating) %>%
+  summarise(sum_cost = sum(Total_Cost)) %>% 
+  drop_na(Overall_Rating) %>%
+  arrange(Overall_Rating)
+
+WestCoastVibes = California %>% 
+  group_by(Overall_Rating) %>%
+  summarise(muted_cost = sum_cost / 1000)
+
+ggplot(WestCoastVibes, aes(x = Overall_Rating, y = muted_cost)) + 
+  geom_bar(color = "green",stat = "identity") + 
+  scale_y_continuous(limits = c(0, 100000)) + 
+  labs(x = "Overall Ranking", y = "Cost (1,000s USD)") + 
+  ggtitle("Overall Ranking and Total Procedure Costs in California Hospitals")
+```
+# Costs and Overall Ranking Association
+First, I divided costs in increments of 1,000 dollars to have a clearer visualization. What is interesting is that highly ranked hospitals are effective at controlling costs. Similarly, the lowest ranked hospitals (1 out of 5) also have low costs. A trend of concern is that middling hospitals (3 out of 5) significantly out pace all other hospitals in total procedure costs. The good news is that the premier hospitals (Ranked a 5) demonstrate a commitment to value based care (Which is the model that Medicare is actively transitioning to currently). 
+
+# 3c) Extend the insights from above
+With the code and data you used in the previous tasks as a base, provide additional insights that augment those from the previous task (3b).
+
+For example, you could consider:
+- Visualizing more variables from the datasets in tasks 1 and 2
+- Leveraging the whole dataset to understand where the California providers stand nationally
+- Gather outside data (e.g. Census) and join with the data in this task (e.g. using Zip Code)
+- Create an interactive plot (plotly or ggplotly) to help explore an expanded dataset
+
+Be sure to structure this response as:
+
+    1) Question or hypothesis
+    2) Code/Data Formatting and Plotting
+    3) Description of new insights
+
+# 3C Question 1
+What other quality measures/factors (outside of Overall Ranking) are most prevalent in CA hospitals? (i.e. how many hospitals are above, below, or at the national average)
+
+```{r California Hospital Rating, Safety, and Costs Relationship}
+
+yoda = hosp_info_CA %>% 
+  rename(Mortality = `Mortality national comparison`,
+         Readmission = `Readmission national comparison`,
+         Patient_Experience = `Patient experience national comparison`,
+         Timeliness = `Timeliness of care national comparison`) %>%
+  select(Safety, Effectiveness, Mortality, Readmission, Patient_Experience, Timeliness)
+
+solo = pivot_longer(yoda, cols=1:6, names_to = "Quality_Measure", values_to = "National_Average")
+
+solo %>% ggplot(aes(x=`Quality_Measure`)) + 
+  geom_bar() + facet_wrap(~National_Average) + 
+  scale_y_continuous() + 
+  labs(color="National_Average", 
+       x = "Measure of Quality", 
+       y = "Total Number of Hospitals") +
+  theme(legend.position = c(0,1),
+        legend.justification = c(0,1),
+        axis.text.x = element_text(face="bold", 
+                                   color="#993333", 
+                                   size=8, angle=90),
+        axis.text.y = element_text(face="bold", 
+                                   size=8)) + 
+  ggtitle("CA Hospitals - Comparing Quality Measures to National Averages")
+
+```
+# Description of new insights
+From this graph we can see that the most number of hospital quality measures fall within the national average, and the least fall within the above national average (not including the unavailble data types). It is interesting to see the below national average counts spiking in the Patient Experience and Timeliness categories; also noting the the lowest count of quality measure for the national average, is patient experience, which is also the highest group within the below national average. We can also see that as Effectiveness is the highest count in the same as the national average (and significantly lower in the other two available groups), that we can't compare a hospital's effectiveness to patient experience, as they are skewed as opposites. This leads me to beleive that although a hospital may be deemed effective at the procedures it performs, patient experience is still overall unsatesfactory. This analysis also leads me to say that when looking at timeliness, which was the second highest level in below national average, that this quality factor may be tied to patient experience. So not so much that the hospitals' procedures were effective, but how long a patient had to wait/remain in inpatient care that factored more into a patient's experience levels.
+
+
+### 3c - 2)
+# Question
+What are the costs (total cost and average cost) associated with the top DRG Codes within their category and their total covered costs, across the US?
+
+# Code/Date Formatting and Plotting
+```{r Top DRG Code cost and associated medicare payment in the US}
+#here i took the costs csv, grouped by DRG code, then mutated a column to sum the total costs of each DRG Code, then took the top DRG code within each group (to find the highest total cost per drg code)
+sith = costs %>%
+  group_by(DRG_Code) %>%
+  mutate(COST = sum(`Total_Cost`)) %>%
+  arrange(desc(Total_Cost)) %>%
+  slice_head(n = 1) %>%
+  arrange(desc(Total_Cost))
+
+Rick = sith %>% select(DRG_Code, 
+                       Count_Discharges, 
+                       `Average Covered Charges`, 
+                       Total_Cost, 
+                       `Average Medicare Payments`, 
+                       Avg_DRG_Cost, 
+                       Cost_Diff, 
+                       COST)
+#this was a secondary graph that provides the same output, but looks at the average medicare payments rather than the total covered costs
+p <- Rick %>%
+  ggplot( aes(Avg_DRG_Cost, `Average Medicare Payments`, size = Total_Cost, color=DRG_Code)) +
+  geom_point() +
+  theme_bw() + 
+  ggtitle("DRG Code Costs associated with average medicare payments") + 
+  xlab("Average DRG Cost") +
+  ylab("Average Covered Charges")
+
+ggplotly(p)
+
+# this is the graph that looks at each top DRG code in it's group at the average covered charges in relation to it's average cost, also it shows the size of each bubble with the total associated costs for the DRG code
+g <- Rick %>%
+  ggplot( aes(Avg_DRG_Cost, `Average Covered Charges`, size = Total_Cost, color=DRG_Code)) +
+  geom_point() +
+  theme_bw() + 
+  ggtitle("DRG Code Costs associated with total covered costs") + 
+  xlab("Average DRG Cost") +
+  ylab("Average Medicare Payments")
+
+ggplotly(g)
+
+```
+# Description of new insights
+We see that a majority of the codes are grouped in the lower left-hand corner associated with lower average costs and covered costs. 
+As for some of the outliers, there are four main ones to focus on. 870 (SEPTICEMIA OR SEVERE SEPSIS W MV 96+ HOURS) which is the highest in terms of average costs, but has a modest covered cost and appears average in terms of the total cost. 853 (INFECTIOUS & PARASITIC DISEASES W O.R. PROCEDURE W MCC) and 329 (MAJOR SMALL & LARGE BOWEL PROCEDURES W MCC) are two other outliers.
+One to note is that DRG Code 207 (RESPIRATORY SYSTEM DIAGNOSIS W VENTILATOR SUPPORT 96+ HOURS) has the highest covered charges, the third highest average cost, and has the highest total cost. Which, as you'll see in the next question, I dive into further in regards to covid (as this DRG code is related).
+It is also interesting to compare the graphs in terms of total covered costs vs. average medicare payments. We still see a grouping in the lower left, but more space between the points, as well as further outliers moving down the x axis and up the y axis. Interesting to also see code 207 at the top of the list of average medicare payments.
+
+
+
+### 3c - 3)
+# Question
+What are some quantifying factors as they relate to overall hospital rankings across all states?
+
+# Code/Date Formatting and Plotting
+```{r}
+
+Re_Join = left_join(costs, test_hosp_info, by = "Provider_ID") %>%
+  select(-"State", 
+         -"Provider Street Address", 
+         -"Provider City", 
+         -"Provider Zip Code", 
+         -"Hospital Referral Region Description", 
+         -"Provider Name") %>% 
+  rename("Total_Medicare_Cost" = "Average Medicare Payments", 
+         "Total_Covered_Cost" = "Average Covered Charges", 
+         "Provider_State" = "Provider State")
+
+Re_Join
+
+#rating and total cost
+ggplot(Re_Join, aes(x=as.factor(Overall_Rating), y=Total_Cost)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Rating") + scale_y_log10()
+
+#Rating and discharges
+ggplot(Re_Join, aes(x=as.factor(Overall_Rating), y=Count_Discharges)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Rating") + scale_y_log10()
+
+#Rating and Average DRG Costs
+ggplot(Re_Join, aes(x=as.factor(Overall_Rating), y=Avg_DRG_Cost)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Rating") + scale_y_log10()
+
+#Rating and Total Medicare Payments
+ggplot(Re_Join, aes(x=as.factor(Overall_Rating), y=Total_Medicare_Cost)) + 
+    geom_boxplot(fill="slateblue", alpha=0.2) + 
+    xlab("Rating") + scale_y_log10()
+
+```
